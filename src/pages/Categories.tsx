@@ -3,7 +3,7 @@ import {
   Box, Typography, Paper, Button, Table, TableBody, TableCell, 
   TableContainer, TableHead, TableRow, IconButton, Dialog, 
   DialogTitle, DialogContent, DialogActions, TextField, 
-  FormControl, InputLabel, Select, MenuItem, FormControlLabel, Switch 
+  FormControlLabel, Switch 
 } from '@mui/material';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Edit, Trash2, Plus } from 'lucide-react';
@@ -11,16 +11,12 @@ import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { categoryService } from '../services/category.service';
-import { CategoryScope, type ICategory } from '../types';
+import { type ICategory } from '../types';
 
 const categorySchema = z.object({
   name: z.string().min(1, 'Name is required'),
-  slug: z.string().min(1, 'Slug is required'),
-  scope: z.nativeEnum(CategoryScope),
   description: z.string().optional(),
-  parentCategory: z.string().optional().nullable(),
   isActive: z.boolean().default(true),
-  sortOrder: z.number().default(0),
 });
 
 type CategoryFormData = z.infer<typeof categorySchema>;
@@ -39,12 +35,8 @@ const Categories: React.FC = () => {
     resolver: zodResolver(categorySchema) as any,
     defaultValues: {
       name: '',
-      slug: '',
-      scope: CategoryScope.DOMESTIC,
       description: '',
-      parentCategory: null,
       isActive: true,
-      sortOrder: 0,
     }
   });
 
@@ -76,23 +68,15 @@ const Categories: React.FC = () => {
       setEditingCategory(category);
       reset({
         name: category.name,
-        slug: category.slug,
-        scope: category.scope,
         description: category.description || '',
-        parentCategory: typeof category.parentCategory === 'string' ? category.parentCategory : category.parentCategory?._id || null,
         isActive: category.isActive,
-        sortOrder: category.sortOrder,
       });
     } else {
       setEditingCategory(null);
       reset({
         name: '',
-        slug: '',
-        scope: CategoryScope.DOMESTIC,
         description: '',
-        parentCategory: null,
         isActive: true,
-        sortOrder: 0,
       });
     }
     setIsDialogOpen(true);
@@ -107,7 +91,6 @@ const Categories: React.FC = () => {
   const onSubmit = (data: CategoryFormData) => {
     const payload = {
       ...data,
-      parentCategory: data.parentCategory || undefined
     };
     if (editingCategory) {
       updateMutation.mutate({ id: editingCategory._id, data: payload });
@@ -143,22 +126,20 @@ const Categories: React.FC = () => {
               <TableRow>
                 <TableCell>Name</TableCell>
                 <TableCell>Slug</TableCell>
-                <TableCell>Scope</TableCell>
                 <TableCell>Status</TableCell>
                 <TableCell align="right">Actions</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
               {isLoading ? (
-                <TableRow><TableCell colSpan={5} align="center">Loading...</TableCell></TableRow>
+                <TableRow><TableCell colSpan={4} align="center">Loading...</TableCell></TableRow>
               ) : categories.length === 0 ? (
-                <TableRow><TableCell colSpan={5} align="center">No categories found</TableCell></TableRow>
+                <TableRow><TableCell colSpan={4} align="center">No categories found</TableCell></TableRow>
               ) : (
                 categories.map((category) => (
                   <TableRow key={category._id} hover>
                     <TableCell sx={{ fontWeight: 'medium' }}>{category.name}</TableCell>
                     <TableCell>{category.slug}</TableCell>
-                    <TableCell sx={{ textTransform: 'capitalize' }}>{category.scope}</TableCell>
                     <TableCell>
                       <Box sx={{ 
                         display: 'inline-block', 
@@ -200,58 +181,10 @@ const Categories: React.FC = () => {
               )}
             />
             <Controller
-              name="slug"
-              control={control}
-              render={({ field }) => (
-                <TextField {...field} label="Slug" fullWidth error={!!errors.slug} helperText={errors.slug?.message} />
-              )}
-            />
-            <Controller
-              name="scope"
-              control={control}
-              render={({ field }) => (
-                <FormControl fullWidth>
-                  <InputLabel>Scope</InputLabel>
-                  <Select {...field} label="Scope">
-                    <MenuItem value={CategoryScope.DOMESTIC}>Domestic</MenuItem>
-                    <MenuItem value={CategoryScope.INTERNATIONAL}>International</MenuItem>
-                  </Select>
-                </FormControl>
-              )}
-            />
-            <Controller
-              name="parentCategory"
-              control={control}
-              render={({ field }) => (
-                <FormControl fullWidth>
-                  <InputLabel>Parent Category</InputLabel>
-                  <Select {...field} label="Parent Category" value={field.value || ''}>
-                    <MenuItem value=""><em>None</em></MenuItem>
-                    {categories.filter(c => c._id !== editingCategory?._id).map(c => (
-                      <MenuItem key={c._id} value={c._id}>{c.name}</MenuItem>
-                    ))}
-                  </Select>
-                </FormControl>
-              )}
-            />
-            <Controller
               name="description"
               control={control}
               render={({ field }) => (
                 <TextField {...field} label="Description" fullWidth multiline rows={3} />
-              )}
-            />
-            <Controller
-              name="sortOrder"
-              control={control}
-              render={({ field }) => (
-                <TextField 
-                  {...field} 
-                  label="Sort Order" 
-                  type="number" 
-                  fullWidth 
-                  onChange={(e) => field.onChange(parseInt(e.target.value, 10))}
-                />
               )}
             />
             <Controller

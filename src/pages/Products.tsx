@@ -81,7 +81,11 @@ const Products: React.FC = () => {
                       )}
                     </TableCell>
                     <TableCell sx={{ textTransform: 'capitalize' }}>{product.productType}</TableCell>
-                    <TableCell>{typeof product.category === 'object' ? product.category?.name : product.category}</TableCell>
+                    <TableCell>
+                      {Array.isArray(product.categories)
+                        ? product.categories.map((c: any) => typeof c === 'object' ? c.name : c).join(', ')
+                        : ''}
+                    </TableCell>
                     <TableCell>
                       <Chip 
                         label={product.status} 

@@ -2,7 +2,7 @@ import React, { useEffect } from 'react';
 import { 
   Box, Typography, Paper, Button, TextField, FormControl, 
   InputLabel, Select, MenuItem, FormControlLabel, Switch,
-  Grid, CircularProgress, IconButton
+  Grid, CircularProgress, IconButton, RadioGroup, Radio, FormLabel
 } from '@mui/material';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useNavigate, useParams } from 'react-router-dom';
@@ -13,17 +13,22 @@ import { Trash2, Plus, ArrowLeft } from 'lucide-react';
 import { productService } from '../services/product.service';
 import { categoryService } from '../services/category.service';
 import { tagService } from '../services/tag.service';
-import { ProductStatus, ProductType } from '../types';
+import { ProductStatus, ProductType, ProductScope } from '../types';
 import api from '../utils/api';
+
+const STRENGTH_OPTIONS = ['50 mg', '25 mg', '60 mg'];
+const PACKAGING_TYPE_OPTIONS = ['Bottle', 'Box'];
+const PACKAGE_SIZE_OPTIONS = ['1* 50 Tablets', '1* 60 Tablets', '100 Tablets', '50 Tablets', '60 Tablets', '90 Tablets'];
 
 const productSchema = z.object({
   name: z.string().min(1, 'Name is required'),
   slug: z.string().min(1, 'Slug is required'),
   genericName: z.string().optional(),
   brandName: z.string().optional(),
-  category: z.string().min(1, 'Category is required'),
+  categories: z.array(z.string()).min(1, 'At least one Category is required'),
   tags: z.array(z.string()).optional(),
   productType: z.nativeEnum(ProductType),
+  scope: z.nativeEnum(ProductScope),
   strength: z.string().optional(),
   dosageForm: z.string().optional(),
   composition: z.string().optional(),
@@ -77,6 +82,10 @@ const ProductForm: React.FC = () => {
   const isEditing = Boolean(id);
   const [uploadingIndex, setUploadingIndex] = React.useState<number | null>(null);
   const [uploadingBrochure, setUploadingBrochure] = React.useState<boolean>(false);
+  
+  const [isStrengthOther, setIsStrengthOther] = React.useState(false);
+  const [isPkgTypeOther, setIsPkgTypeOther] = React.useState(false);
+  const [isPkgSizeOther, setIsPkgSizeOther] = React.useState(false);
 
   const handleImageUpload = async (index: number, file: File) => {
     setUploadingIndex(index);
@@ -86,7 +95,7 @@ const ProductForm: React.FC = () => {
       const response = await api.post('/upload', formData, {
         headers: { 'Content-Type': 'multipart/form-data' }
       });
-      setValue(`images.${index}.url`, response.data.data.url);
+      setValue(`images.${index}.url` as any, response.data.data.url);
     } catch (err) {
       console.error(err);
       alert('Failed to upload image. Please check AWS S3 credentials and bucket configuration.');
@@ -104,10 +113,11 @@ const ProductForm: React.FC = () => {
     enabled: isEditing
   });
 
-  const { control, handleSubmit, reset, setValue, formState: { errors } } = useForm<ProductFormData>({
+  const { control, handleSubmit, reset, setValue, watch, formState: { errors } } = useForm<ProductFormData>({
     resolver: zodResolver(productSchema),
     defaultValues: {
-      name: '', slug: '', category: '', tags: [], productType: ProductType.TABLET,
+      name: '', slug: '', categories: [], tags: [], productType: ProductType.TABLET,
+      scope: ProductScope.DOMESTIC,
       status: ProductStatus.DRAFT, prescriptionRequired: false, minOrderQuantity: 1,
       packaging: { size: '', type: '', unitCount: 1 },
       pricing: { currency: 'INR', salePrice: 0, mrp: 0, unitLabel: '' },
@@ -117,6 +127,20 @@ const ProductForm: React.FC = () => {
     }
   });
 
+  const nameValue = watch('name');
+
+  useEffect(() => {
+    if (nameValue && !isEditing) {
+      const generatedSlug = nameValue
+        .toLowerCase()
+        .trim()
+        .replace(/[^a-z0-9\s-]/g, '')
+        .replace(/[\s_]+/g, '-')
+        .replace(/-+/g, '-');
+      setValue('slug', generatedSlug);
+    }
+  }, [nameValue, isEditing, setValue]);
+
   const { fields: imageFields, append: appendImage, remove: removeImage } = useFieldArray({ control, name: 'images' });
   const { fields: specFields, append: appendSpec, remove: removeSpec } = useFieldArray({ control, name: 'additionalSpecs' });
 
@@ -124,9 +148,21 @@ const ProductForm: React.FC = () => {
     if (product) {
       reset({
         ...product,
-        category: typeof product.category === 'object' ? product.category._id : product.category,
+        categories: Array.isArray(product.categories)
+          ? product.categories.map(c => typeof c === 'object' ? c._id : c)
+          : [],
         tags: product.tags.map(t => typeof t === 'object' ? t._id : t),
       } as any);
+
+      if (product.strength && !STRENGTH_OPTIONS.includes(product.strength)) {
+        setIsStrengthOther(true);
+      }
+      if (product.packaging?.type && !PACKAGING_TYPE_OPTIONS.includes(product.packaging.type)) {
+        setIsPkgTypeOther(true);
+      }
+      if (product.packaging?.size && !PACKAGE_SIZE_OPTIONS.includes(product.packaging.size)) {
+        setIsPkgSizeOther(true);
+      }
     }
   }, [product, reset]);
 
@@ -178,14 +214,9 @@ const ProductForm: React.FC = () => {
             <Paper sx={{ p: 3, mb: 3, borderRadius: 2 }}>
               <Typography variant="h6" sx={{ fontWeight: 'bold', mb: 2 }}>Basic Information</Typography>
               <Grid container spacing={2}>
-                <Grid size={{ xs: 12, sm: 6 }}>
+                <Grid size={{ xs: 12 }}>
                   <Controller name="name" control={control} render={({ field }) => (
                     <TextField {...field} label="Product Name" fullWidth error={!!errors.name} helperText={errors.name?.message} />
-                  )}/>
-                </Grid>
-                <Grid size={{ xs: 12, sm: 6 }}>
-                  <Controller name="slug" control={control} render={({ field }) => (
-                    <TextField {...field} label="Slug" fullWidth error={!!errors.slug} helperText={errors.slug?.message} />
                   )}/>
                 </Grid>
                 <Grid size={{ xs: 12, sm: 6 }}>
@@ -210,10 +241,46 @@ const ProductForm: React.FC = () => {
             <Paper sx={{ p: 3, mb: 3, borderRadius: 2 }}>
               <Typography variant="h6" sx={{ fontWeight: 'bold', mb: 2 }}>Specifications</Typography>
               <Grid container spacing={2}>
-                <Grid size={{ xs: 12, sm: 4 }}>
-                  <Controller name="strength" control={control} render={({ field }) => (
-                    <TextField {...field} label="Strength" fullWidth />
-                  )}/>
+                <Grid size={{ xs: 12 }}>
+                  <Controller name="strength" control={control} render={({ field }) => {
+                    const currentValue = field.value || '';
+                    const isPredefined = STRENGTH_OPTIONS.includes(currentValue);
+                    const radioValue = isStrengthOther ? 'Other' : (isPredefined ? currentValue : '');
+                    return (
+                      <FormControl component="fieldset" fullWidth sx={{ mb: 1 }}>
+                        <FormLabel component="legend" sx={{ mb: 1, fontWeight: 'bold' }}>Strength</FormLabel>
+                        <RadioGroup
+                          row
+                          value={radioValue}
+                          onChange={(e) => {
+                            const val = e.target.value;
+                            if (val === 'Other') {
+                              setIsStrengthOther(true);
+                              field.onChange('');
+                            } else {
+                              setIsStrengthOther(false);
+                              field.onChange(val);
+                            }
+                          }}
+                        >
+                          {STRENGTH_OPTIONS.map((opt) => (
+                            <FormControlLabel key={opt} value={opt} control={<Radio />} label={opt} />
+                          ))}
+                          <FormControlLabel value="Other" control={<Radio />} label="Other" />
+                        </RadioGroup>
+                        {isStrengthOther && (
+                          <TextField
+                            value={currentValue}
+                            onChange={(e) => field.onChange(e.target.value)}
+                            label="Specify Strength"
+                            fullWidth
+                            size="small"
+                            sx={{ mt: 1 }}
+                          />
+                        )}
+                      </FormControl>
+                    );
+                  }}/>
                 </Grid>
                 <Grid size={{ xs: 12, sm: 4 }}>
                   <Controller name="dosageForm" control={control} render={({ field }) => (
@@ -334,7 +401,7 @@ const ProductForm: React.FC = () => {
                           const response = await api.post('/upload', formData, {
                             headers: { 'Content-Type': 'multipart/form-data' }
                           });
-                          setValue('brochure.url', response.data.data.url);
+                          setValue('brochure.url' as any, response.data.data.url);
                         } catch (err) {
                           console.error(err);
                           alert('Failed to upload PDF. Please check S3 settings.');
@@ -390,10 +457,21 @@ const ProductForm: React.FC = () => {
                 </FormControl>
               )}/>
 
-              <Controller name="category" control={control} render={({ field }) => (
-                <FormControl fullWidth sx={{ mb: 2 }} error={!!errors.category}>
-                  <InputLabel>Category</InputLabel>
-                  <Select {...field} label="Category">
+              <Controller name="scope" control={control} render={({ field }) => (
+                <FormControl fullWidth sx={{ mb: 2 }} error={!!errors.scope}>
+                  <InputLabel>Scope</InputLabel>
+                  <Select {...field} label="Scope">
+                    <MenuItem value={ProductScope.DOMESTIC}>Domestic</MenuItem>
+                    <MenuItem value={ProductScope.INTERNATIONAL}>International</MenuItem>
+                    <MenuItem value={ProductScope.BOTH}>Both (Domestic & International)</MenuItem>
+                  </Select>
+                </FormControl>
+              )}/>
+
+              <Controller name="categories" control={control} render={({ field }) => (
+                <FormControl fullWidth sx={{ mb: 2 }} error={!!errors.categories}>
+                  <InputLabel>Categories</InputLabel>
+                  <Select {...field} label="Categories" multiple value={Array.isArray(field.value) ? field.value : []}>
                     {categories.map((c: any) => (
                       <MenuItem key={c._id} value={c._id}>{c.name}</MenuItem>
                     ))}
@@ -422,15 +500,87 @@ const ProductForm: React.FC = () => {
               <Typography variant="h6" sx={{ fontWeight: 'bold', mb: 2 }}>Packaging Details</Typography>
 
               <Grid container spacing={2}>
-                <Grid size={6}>
-                  <Controller name="packaging.type" control={control} render={({ field }) => (
-                    <TextField {...field} label="Type (e.g. Box)" fullWidth />
-                  )}/>
+                <Grid size={12}>
+                  <Controller name="packaging.type" control={control} render={({ field }) => {
+                    const currentValue = field.value || '';
+                    const isPredefined = PACKAGING_TYPE_OPTIONS.includes(currentValue);
+                    const radioValue = isPkgTypeOther ? 'Other' : (isPredefined ? currentValue : '');
+                    return (
+                      <FormControl component="fieldset" fullWidth sx={{ mb: 2 }}>
+                        <FormLabel component="legend" sx={{ mb: 1, fontWeight: 'bold' }}>Packaging Type</FormLabel>
+                        <RadioGroup
+                          row
+                          value={radioValue}
+                          onChange={(e) => {
+                            const val = e.target.value;
+                            if (val === 'Other') {
+                              setIsPkgTypeOther(true);
+                              field.onChange('');
+                            } else {
+                              setIsPkgTypeOther(false);
+                              field.onChange(val);
+                            }
+                          }}
+                        >
+                          {PACKAGING_TYPE_OPTIONS.map((opt) => (
+                            <FormControlLabel key={opt} value={opt} control={<Radio />} label={opt} />
+                          ))}
+                          <FormControlLabel value="Other" control={<Radio />} label="Other" />
+                        </RadioGroup>
+                        {isPkgTypeOther && (
+                          <TextField
+                            value={currentValue}
+                            onChange={(e) => field.onChange(e.target.value)}
+                            label="Specify Packaging Type"
+                            fullWidth
+                            size="small"
+                            sx={{ mt: 1 }}
+                          />
+                        )}
+                      </FormControl>
+                    );
+                  }}/>
                 </Grid>
-                <Grid size={6}>
-                  <Controller name="packaging.size" control={control} render={({ field }) => (
-                    <TextField {...field} label="Size" fullWidth />
-                  )}/>
+                <Grid size={12}>
+                  <Controller name="packaging.size" control={control} render={({ field }) => {
+                    const currentValue = field.value || '';
+                    const isPredefined = PACKAGE_SIZE_OPTIONS.includes(currentValue);
+                    const radioValue = isPkgSizeOther ? 'Other' : (isPredefined ? currentValue : '');
+                    return (
+                      <FormControl component="fieldset" fullWidth sx={{ mb: 1 }}>
+                        <FormLabel component="legend" sx={{ mb: 1, fontWeight: 'bold' }}>Package Size</FormLabel>
+                        <RadioGroup
+                          row
+                          value={radioValue}
+                          onChange={(e) => {
+                            const val = e.target.value;
+                            if (val === 'Other') {
+                              setIsPkgSizeOther(true);
+                              field.onChange('');
+                            } else {
+                              setIsPkgSizeOther(false);
+                              field.onChange(val);
+                            }
+                          }}
+                        >
+                          {PACKAGE_SIZE_OPTIONS.map((opt) => (
+                            <FormControlLabel key={opt} value={opt} control={<Radio />} label={opt} />
+                          ))}
+                          <FormControlLabel value="Other" control={<Radio />} label="Other" />
+                        </RadioGroup>
+                        {isPkgSizeOther && (
+                          <TextField
+                            value={currentValue}
+                            onChange={(e) => field.onChange(e.target.value)}
+                            label="Specify Package Size"
+                            fullWidth
+                            size="small"
+                            sx={{ mt: 1 }}
+                          />
+                        )}
+                      </FormControl>
+                    );
+                  }}/>
                 </Grid>
               </Grid>
             </Paper>

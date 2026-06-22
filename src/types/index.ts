@@ -6,11 +6,12 @@ export const UserRole = {
 } as const;
 export type UserRole = (typeof UserRole)[keyof typeof UserRole];
 
-export const CategoryScope = {
+export const ProductScope = {
   DOMESTIC: 'domestic',
   INTERNATIONAL: 'international',
+  BOTH: 'both',
 } as const;
-export type CategoryScope = (typeof CategoryScope)[keyof typeof CategoryScope];
+export type ProductScope = (typeof ProductScope)[keyof typeof ProductScope];
 
 export const ProductStatus = {
   DRAFT: 'draft',
@@ -33,11 +34,8 @@ export interface ICategory {
   _id: string;
   name: string;
   slug: string;
-  scope: CategoryScope;
   description?: string;
-  parentCategory?: string | ICategory;
   isActive: boolean;
-  sortOrder: number;
   createdAt: string;
   updatedAt: string;
 }
@@ -101,9 +99,10 @@ export interface IProduct {
   slug: string;
   genericName?: string;
   brandName?: string;
-  category: ICategory | string;
+  categories: (ICategory | string)[];
   tags: (ITag | string)[];
   productType: ProductType;
+  scope: ProductScope;
   strength?: string;
   dosageForm?: string;
   composition?: string;
