@@ -2,14 +2,15 @@ import React, { useEffect } from 'react';
 import { 
   Box, Typography, Paper, Button, TextField, FormControl, 
   InputLabel, Select, MenuItem, FormControlLabel, Switch,
-  Grid, CircularProgress, IconButton, RadioGroup, Radio, FormLabel
+  Grid, CircularProgress, IconButton, RadioGroup, Radio, FormLabel,
+  Dialog, DialogTitle, DialogContent, DialogActions, Card, CardContent, CardMedia, Chip
 } from '@mui/material';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useForm, Controller, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Trash2, Plus, ArrowLeft } from 'lucide-react';
+import { Trash2, Plus, ArrowLeft, Eye } from 'lucide-react';
 import { productService } from '../services/product.service';
 import { categoryService } from '../services/category.service';
 import { tagService } from '../services/tag.service';
@@ -82,6 +83,7 @@ const ProductForm: React.FC = () => {
   const isEditing = Boolean(id);
   const [uploadingIndex, setUploadingIndex] = React.useState<number | null>(null);
   const [uploadingBrochure, setUploadingBrochure] = React.useState<boolean>(false);
+  const [previewOpen, setPreviewOpen] = React.useState(false);
   
   const [isStrengthOther, setIsStrengthOther] = React.useState(false);
   const [isPkgTypeOther, setIsPkgTypeOther] = React.useState(false);
@@ -152,6 +154,7 @@ const ProductForm: React.FC = () => {
           ? product.categories.map(c => typeof c === 'object' ? c._id : c)
           : [],
         tags: product.tags.map(t => typeof t === 'object' ? t._id : t),
+        composition: Array.isArray(product.composition) ? product.composition.join(', ') : product.composition,
       } as any);
 
       if (product.strength && !STRENGTH_OPTIONS.includes(product.strength)) {
@@ -183,10 +186,19 @@ const ProductForm: React.FC = () => {
   });
 
   const onSubmit = (data: ProductFormData) => {
-    const cleanedData = { ...data };
+    const cleanedData: any = { ...data };
     if (!cleanedData.brochure?.url) {
       delete cleanedData.brochure;
     }
+    
+    // Convert composition string back to array before submission
+    if (typeof cleanedData.composition === 'string') {
+      cleanedData.composition = cleanedData.composition
+        .split(',')
+        .map((s: string) => s.trim())
+        .filter((s: string) => s !== '');
+    }
+
     if (isEditing && id) {
       updateMutation.mutate({ id, data: cleanedData });
     } else {
@@ -212,7 +224,8 @@ const ProductForm: React.FC = () => {
 
             {/* Basic Information */}
             <Paper sx={{ p: 3, mb: 3, borderRadius: 2 }}>
-              <Typography variant="h6" sx={{ fontWeight: 'bold', mb: 2 }}>Basic Information</Typography>
+              <Typography variant="h6" sx={{ fontWeight: 'bold' }}>Basic Information</Typography>
+              <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>Provide the core details of the product including its name, brand, and general description.</Typography>
               <Grid container spacing={2}>
                 <Grid size={{ xs: 12 }}>
                   <Controller name="name" control={control} render={({ field }) => (
@@ -239,7 +252,8 @@ const ProductForm: React.FC = () => {
 
             {/* Specifications */}
             <Paper sx={{ p: 3, mb: 3, borderRadius: 2 }}>
-              <Typography variant="h6" sx={{ fontWeight: 'bold', mb: 2 }}>Specifications</Typography>
+              <Typography variant="h6" sx={{ fontWeight: 'bold' }}>Specifications</Typography>
+              <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>Specify the physical and chemical properties such as strength, dosage form, and composition.</Typography>
               <Grid container spacing={2}>
                 <Grid size={{ xs: 12 }}>
                   <Controller name="strength" control={control} render={({ field }) => {
@@ -289,7 +303,13 @@ const ProductForm: React.FC = () => {
                 </Grid>
                 <Grid size={{ xs: 12, sm: 4 }}>
                   <Controller name="composition" control={control} render={({ field }) => (
-                    <TextField {...field} label="Composition" fullWidth />
+                    <TextField 
+                      {...field}
+                      value={field.value || ''}
+                      label="Composition (comma separated)" 
+                      fullWidth 
+                      helperText="Enter ingredients separated by commas"
+                    />
                   )}/>
                 </Grid>
                 <Grid size={{ xs: 12, sm: 6 }}>
@@ -312,10 +332,11 @@ const ProductForm: React.FC = () => {
 
             {/* Additional Specs Dynamic Fields */}
             <Paper sx={{ p: 3, mb: 3, borderRadius: 2 }}>
-              <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
                 <Typography variant="h6" sx={{ fontWeight: 'bold' }}>Additional Specifications</Typography>
                 <Button startIcon={<Plus size={16} />} onClick={() => appendSpec({ label: '', value: '' })}>Add Spec</Button>
               </Box>
+              <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>Add any other key-value pairs that describe this product.</Typography>
               {specFields.map((item, index) => (
                 <Box key={item.id} sx={{ display: 'flex', gap: 2, mb: 2, alignItems: 'center' }}>
                   <Controller name={`additionalSpecs.${index}.label`} control={control} render={({ field }) => (
@@ -331,10 +352,11 @@ const ProductForm: React.FC = () => {
 
             {/* Images Dynamic Fields */}
             <Paper sx={{ p: 3, mb: 3, borderRadius: 2 }}>
-              <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
                 <Typography variant="h6" sx={{ fontWeight: 'bold' }}>Images</Typography>
                 <Button startIcon={<Plus size={16} />} onClick={() => appendImage({ url: '', alt: '', isPrimary: false })}>Add Image URL</Button>
               </Box>
+              <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>Upload product images or provide direct URLs.</Typography>
               {imageFields.map((item, index) => (
                 <Box key={item.id} sx={{ display: 'flex', gap: 2, mb: 2, alignItems: 'center' }}>
                   <Controller name={`images.${index}.url`} control={control} render={({ field }) => (
@@ -587,6 +609,7 @@ const ProductForm: React.FC = () => {
 
             {/* Submit Actions */}
             <Box sx={{ display: 'flex', gap: 2, justifyContent: 'flex-end' }}>
+              <Button variant="outlined" color="secondary" startIcon={<Eye size={18} />} onClick={() => setPreviewOpen(true)}>Preview</Button>
               <Button variant="outlined" onClick={() => navigate('/products')}>Cancel</Button>
               <Button type="submit" variant="contained" disabled={createMutation.isPending || updateMutation.isPending}>
                 {isEditing ? 'Save Changes' : 'Create Product'}
@@ -596,6 +619,45 @@ const ProductForm: React.FC = () => {
           </Grid>
         </Grid>
       </form>
+
+      {/* Preview Modal */}
+      <Dialog open={previewOpen} onClose={() => setPreviewOpen(false)} maxWidth="sm" fullWidth>
+        <DialogTitle sx={{ fontWeight: 'bold' }}>Product Preview</DialogTitle>
+        <DialogContent dividers sx={{ bgcolor: '#f4f7f6', display: 'flex', justifyContent: 'center', p: 4 }}>
+          {/* Pharmeasy style card preview */}
+          <Card sx={{ width: '100%', maxWidth: 360, borderRadius: 3, boxShadow: '0 8px 24px rgba(0,0,0,0.08)', position: 'relative', overflow: 'visible' }}>
+            <Box sx={{ position: 'absolute', top: -12, right: 16, zIndex: 10 }}>
+              <Chip label={watch('productType') || 'TABLET'} sx={{ bgcolor: 'white', color: '#146C94', fontWeight: 'bold', border: '1px solid #e0e0e0', boxShadow: '0 2px 8px rgba(0,0,0,0.05)', borderRadius: 1 }} />
+            </Box>
+            <Box sx={{ p: 2, display: 'flex', justifyContent: 'center', bgcolor: '#fff', borderTopLeftRadius: 12, borderTopRightRadius: 12 }}>
+              {watch('images')?.[0]?.url ? (
+                <img src={watch('images')![0].url} alt="Product" style={{ height: 180, objectFit: 'contain' }} />
+              ) : (
+                <Box sx={{ height: 180, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'text.secondary' }}>No Image</Box>
+              )}
+            </Box>
+            <CardContent sx={{ pt: 1, bgcolor: '#ffffff', borderBottomLeftRadius: 12, borderBottomRightRadius: 12 }}>
+              <Typography variant="overline" sx={{ color: '#10b981', fontWeight: 'bold', lineHeight: 1 }}>
+                {watch('brandName') || 'BRAND NAME'}
+              </Typography>
+              <Typography variant="h6" sx={{ fontWeight: 'bold', mt: 0.5, lineHeight: 1.2, mb: 1, color: '#1a1a1a' }}>
+                {watch('name') || 'Product Name'}
+              </Typography>
+              {watch('composition') && typeof watch('composition') === 'string' && watch('composition')!.trim() !== '' && (
+                <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+                  {watch('composition')!.split(',').map(s => s.trim()).filter(s => s !== '').join(' + ')}
+                </Typography>
+              )}
+              {watch('packaging')?.size && (
+                <Chip size="small" label={watch('packaging')?.size} sx={{ bgcolor: '#f3f4f6', color: '#4b5563', borderRadius: 1 }} />
+              )}
+            </CardContent>
+          </Card>
+        </DialogContent>
+        <DialogActions sx={{ p: 2 }}>
+          <Button onClick={() => setPreviewOpen(false)} variant="contained" color="primary" sx={{ borderRadius: 2 }}>Close Preview</Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 };

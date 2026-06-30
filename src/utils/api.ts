@@ -3,8 +3,8 @@ import axios from 'axios';
 // In production (after `npm run build`), VITE_API_URL points to the CloudFront /api path.
 // In development, falls back to the local backend server.
 const api = axios.create({
-  baseURL: 'https://uv0bsng6yh.execute-api.ap-south-1.amazonaws.com/dev/api',
-  // baseURL: import.meta.env.VITE_API_URL,
+  // baseURL: 'https://uv0bsng6yh.execute-api.ap-south-1.amazonaws.com/dev/api',
+  baseURL: import.meta.env.VITE_API_URL,
 });
 
 // Add a request interceptor to attach JWT token

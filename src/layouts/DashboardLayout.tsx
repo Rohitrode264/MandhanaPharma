@@ -1,12 +1,12 @@
 import React from 'react';
 import { Outlet, Navigate, Link, useLocation } from 'react-router-dom';
-import { 
-  Box, Drawer, AppBar, Toolbar, List, Typography, Divider, 
-  IconButton, ListItem, ListItemButton, ListItemIcon, ListItemText, 
+import {
+  Box, Drawer, AppBar, Toolbar, List, Typography, Divider,
+  IconButton, ListItem, ListItemButton, ListItemIcon, ListItemText,
   Button
 } from '@mui/material';
-import { 
-  Menu as MenuIcon, Package, Tags, Grid, LogOut, Activity 
+import {
+  Menu as MenuIcon, Package, Tags, Grid, LogOut
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
@@ -33,28 +33,25 @@ const DashboardLayout: React.FC = () => {
 
   const drawer = (
     <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
-      <Toolbar sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 1.5, py: 2 }}>
-        <Activity size={24} color="#1E3A8A" />
-        <Typography variant="h6" color="primary" sx={{ letterSpacing: 0.5, fontWeight: 'bold' }}>
-          Mandana Pharma
-        </Typography>
-      </Toolbar>
+      
       <Divider />
       <List sx={{ flexGrow: 1, px: 2, pt: 2 }}>
         {menuItems.map((item) => {
           const isActive = location.pathname.startsWith(item.path);
           return (
             <ListItem key={item.text} disablePadding sx={{ mb: 1 }}>
-              <ListItemButton 
-                component={Link} 
+              <ListItemButton
+                component={Link}
                 to={item.path}
-                sx={{ 
+                sx={{
                   borderRadius: 2,
                   bgcolor: isActive ? 'primary.light' : 'transparent',
                   color: isActive ? 'white' : 'text.secondary',
+                  transition: 'all 0.2s ease-in-out',
                   '&:hover': {
-                    bgcolor: isActive ? 'primary.main' : 'action.hover',
+                    bgcolor: isActive ? 'primary.main' : 'rgba(0,0,0,0.04)',
                     color: isActive ? 'white' : 'text.primary',
+                    transform: isActive ? 'none' : 'translateX(4px)'
                   }
                 }}
               >
@@ -68,10 +65,10 @@ const DashboardLayout: React.FC = () => {
         })}
       </List>
       <Box sx={{ p: 2 }}>
-        <Button 
-          fullWidth 
-          variant="outlined" 
-          color="error" 
+        <Button
+          fullWidth
+          variant="outlined"
+          color="error"
           startIcon={<LogOut size={18} />}
           onClick={logout}
           sx={{ borderRadius: 2 }}
@@ -83,41 +80,48 @@ const DashboardLayout: React.FC = () => {
   );
 
   return (
-    <Box sx={{ display: 'flex', minHeight: '100vh', bgcolor: 'background.default' }}>
+    <Box sx={{ display: 'flex', minHeight: '100vh', bgcolor: '#F5F7FA' }}>
       <AppBar
         position="fixed"
         elevation={0}
         sx={{
-          width: { sm: `calc(100% - ${drawerWidth}px)` },
-          ml: { sm: `${drawerWidth}px` },
-          bgcolor: 'rgba(255, 255, 255, 0.8)',
-          backdropFilter: 'blur(10px)',
+          zIndex: (theme) => theme.zIndex.drawer + 1,
+          bgcolor: '#FFFFFF',
           borderBottom: '1px solid',
           borderColor: 'divider',
           color: 'text.primary',
         }}
       >
-        <Toolbar>
-          <IconButton
-            color="inherit"
-            aria-label="open drawer"
-            edge="start"
-            onClick={handleDrawerToggle}
-            sx={{ mr: 2, display: { sm: 'none' } }}
-          >
-            <MenuIcon />
-          </IconButton>
-          <Box>
-            <Typography variant="h6" noWrap component="div" sx={{ fontWeight: 600, lineHeight: 1.2 }}>
-              {menuItems.find(item => location.pathname.startsWith(item.path))?.text || 'Dashboard'}
+        <Toolbar sx={{ justifyContent: 'space-between', px: { xs: 2, sm: 4 } }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <IconButton
+              color="inherit"
+              aria-label="open drawer"
+              edge="start"
+              onClick={handleDrawerToggle}
+              sx={{ mr: 2, display: { sm: 'none' } }}
+            >
+              <MenuIcon />
+            </IconButton>
+            <Box sx={{ width: 28, height: 28, bgcolor: 'primary.main', borderRadius: 1.5, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <Package size={16} color="white" />
+            </Box>
+            <Typography variant="h6" sx={{ fontWeight: 600, color: '#1F2937', ml: 1 }}>
+              Mandhana Pharma
             </Typography>
-            <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 400 }}>
-              {menuItems.find(item => location.pathname.startsWith(item.path))?.subText || 'Overview and quick access to your portal'}
-            </Typography>
+          </Box>
+
+         
+
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+         
+            <Box sx={{ width: 32, height: 32, borderRadius: '50%', bgcolor: '#E5E7EB', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '2px solid white', cursor: 'pointer' }}>
+              <Typography variant="caption" sx={{ fontWeight: 600 }}>MP</Typography>
+            </Box>
           </Box>
         </Toolbar>
       </AppBar>
-      
+
       <Box
         component="nav"
         sx={{ width: { sm: drawerWidth }, flexShrink: { sm: 0 } }}
@@ -130,7 +134,7 @@ const DashboardLayout: React.FC = () => {
           ModalProps={{ keepMounted: true }}
           sx={{
             display: { xs: 'block', sm: 'none' },
-            '& .MuiDrawer-paper': { boxSizing: 'border-box', width: drawerWidth, borderRight: 'none', boxShadow: 3 },
+            '& .MuiDrawer-paper': { boxSizing: 'border-box', width: drawerWidth, borderRight: 'none', boxShadow: 3, pt: 8 },
           }}
         >
           {drawer}
@@ -139,14 +143,14 @@ const DashboardLayout: React.FC = () => {
           variant="permanent"
           sx={{
             display: { xs: 'none', sm: 'block' },
-            '& .MuiDrawer-paper': { boxSizing: 'border-box', width: drawerWidth, borderRight: '1px solid', borderColor: 'divider' },
+            '& .MuiDrawer-paper': { boxSizing: 'border-box', width: drawerWidth, borderRight: '1px solid', borderColor: 'divider', pt: 8 },
           }}
           open
         >
           {drawer}
         </Drawer>
       </Box>
-      
+
       <Box
         component="main"
         sx={{ flexGrow: 1, p: { xs: 2, sm: 4 }, width: { sm: `calc(100% - ${drawerWidth}px)` }, mt: 8 }}
