@@ -3,7 +3,7 @@ import {
   Box, Typography, Paper, Button, TextField, FormControl, 
   InputLabel, Select, MenuItem, FormControlLabel, Switch,
   Grid, CircularProgress, IconButton, RadioGroup, Radio, FormLabel,
-  Dialog, DialogTitle, DialogContent, DialogActions, Card, CardContent, CardMedia, Chip
+  Dialog, DialogTitle, DialogContent, DialogActions, Card, CardContent, Chip
 } from '@mui/material';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useNavigate, useParams } from 'react-router-dom';
@@ -418,7 +418,7 @@ const ProductForm: React.FC = () => {
                       if (file) {
                         setUploadingBrochure(true);
                         const formData = new FormData();
-                        formData.append('image', file);
+                        formData.append('file', file);
                         try {
                           const response = await api.post('/upload', formData, {
                             headers: { 'Content-Type': 'multipart/form-data' }
