@@ -9,6 +9,7 @@ import {
   Menu as MenuIcon, Package, Tags, Grid, LogOut
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import { getDynamicGreeting } from '../utils/greeting';
 
 const drawerWidth = 260;
 
@@ -114,7 +115,9 @@ const DashboardLayout: React.FC = () => {
          
 
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-         
+            <Typography variant="body2" sx={{ color: 'text.secondary', fontWeight: 500, display: { xs: 'none', sm: 'block' } }}>
+              {getDynamicGreeting()}
+            </Typography>
             <Box sx={{ width: 32, height: 32, borderRadius: '50%', bgcolor: '#E5E7EB', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '2px solid white', cursor: 'pointer' }}>
               <Typography variant="caption" sx={{ fontWeight: 600 }}>MP</Typography>
             </Box>

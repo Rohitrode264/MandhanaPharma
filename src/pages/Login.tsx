@@ -2,7 +2,8 @@ import React, { useState } from 'react';
 import { Box, Paper, Typography, TextField, Button, Alert, CircularProgress } from '@mui/material';
 import { useAuth } from '../context/AuthContext';
 import api from '../utils/api';
-import { Navigate } from 'react-router-dom';
+import { Navigate, Link } from 'react-router-dom';
+import { getDynamicGreeting } from '../utils/greeting';
 
 const Login: React.FC = () => {
   const { login, isAuthenticated } = useAuth();
@@ -73,7 +74,7 @@ const Login: React.FC = () => {
 
           <Box sx={{ maxWidth: 360, mx: 'auto', width: '100%', flex: 1 }}>
             <Typography variant="h4" sx={{ fontWeight: 600, color: '#1F2937', textAlign: 'center', mb: 1 }}>
-              Good Morning!
+              {getDynamicGreeting()}
             </Typography>
             <Typography variant="body2" sx={{ color: '#6B7280', textAlign: 'center', mb: 5, px: 2 }}>
               Please enter your Email ID and Password to access your account
@@ -120,7 +121,7 @@ const Login: React.FC = () => {
                 }}
               />
               <Box sx={{ display: 'flex', justifyContent: 'flex-start', mb: 4 }}>
-                <Typography variant="caption" sx={{ color: '#4CAF50', cursor: 'pointer', fontWeight: 500 }}>
+                <Typography component={Link} to="/forgot-password" variant="caption" sx={{ color: '#4CAF50', cursor: 'pointer', fontWeight: 500, textDecoration: 'none', '&:hover': { textDecoration: 'underline' } }}>
                   Forgot your password?
                 </Typography>
               </Box>
